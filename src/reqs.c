@@ -207,8 +207,8 @@ static int extract_url (const char *url, int default_port,
         /* Split the URL on the slash to separate host from path */
         if (*url == '/' )
                 request->path = safestrdup (url);
-        else if ((p = strstr(url, "//")) != NULL && p <= strchr(url, '/'))
-                request->path = safestrdup (strchr(p+2, '/'));
+        else if ((p = strstr(url, "//")) != NULL && (p = strchr(p+2, '/')) != NULL)
+                request->path = safestrdup (p);
         else
                 request->path = safestrdup ("/");
 
@@ -236,8 +236,7 @@ static int extract_url (const char *url, int default_port,
         request->port = (port != 0) ? port : default_port;
 
         /* Remove any surrounding '[' and ']' from IPv6 literals */
-        p = strrchr (request->host, ']');
-        if (p && (*(request->host) == '[')) {
+        if ((*(request->host) == '[') && (p = strrchr (request->host, ']')) != NULL) {
                 memmove(request->host, request->host + 1,
                         strlen(request->host) - 2);
                 *p = '\0';
@@ -421,18 +420,14 @@ BAD_REQUEST_ERROR:
         }
 #endif
 
-        if (strncasecmp (url, "http://", 7) == 0
-            || (UPSTREAM_CONFIGURED () && strncasecmp (url, "ftp://", 6) == 0))
-        {
-                char *skipped_type = strstr (url, "//") + 2;
-
-                if (extract_url (skipped_type, HTTP_PORT, request, hashofheaders) < 0) {
+        if (strcmp (request->method, "CONNECT") != 0) {
+                if (extract_url (url, HTTP_PORT, request, hashofheaders) < 0) {
                         indicate_http_error (connptr, 400, "Bad Request",
                                              "detail", "Could not parse URL",
                                              "url", url, NULL);
                         goto fail;
                 }
-        } else if (strcmp (request->method, "CONNECT") == 0) {
+        } else {
                 if (extract_url (url, HTTP_PORT_SSL, request, hashofheaders) < 0) {
                         indicate_http_error (connptr, 400, "Bad Request",
                                              "detail", "Could not parse URL",
@@ -456,21 +451,6 @@ BAD_REQUEST_ERROR:
                 }
 
                 connptr->connect_method = TRUE;
-        } else {
-#ifdef TRANSPARENT_PROXY
-                if (!do_transparent_proxy
-                    (connptr, hashofheaders, request, config, &url)) {
-                        goto fail;
-                }
-#else
-                indicate_http_error (connptr, 501, "Not Implemented",
-                                     "detail",
-                                     "Unknown method or unsupported protocol.",
-                                     "url", url, NULL);
-                log_message (LOG_INFO, "Unknown method (%s) or protocol (%s)",
-                             request->method, url);
-                goto fail;
-#endif
         }
 
 #ifdef FILTER_ENABLE
