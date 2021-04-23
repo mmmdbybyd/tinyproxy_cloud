@@ -113,6 +113,8 @@ static HANDLE_FUNC (handle_disabled_feature)
         return -1;
 }
 
+static HANDLE_FUNC (handle_local_header);
+static HANDLE_FUNC (handle_proxy_header);
 static HANDLE_FUNC (handle_allow);
 static HANDLE_FUNC (handle_basicauth);
 static HANDLE_FUNC (handle_anonymous);
@@ -185,6 +187,8 @@ struct {
         regex_t *cre;
 } directives[] = {
         /* string arguments */
+        STDCONF (local_header, STR, handle_local_header),
+        STDCONF (proxy_header, STR, handle_proxy_header),
         STDCONF (logfile, STR, handle_logfile),
         STDCONF (pidfile, STR, handle_pidfile),
         STDCONF (anonymous, STR, handle_anonymous),
@@ -275,7 +279,7 @@ static void stringlist_free(sblist *sl) {
                 for(i = 0; i < sblist_getsize(sl); i++) {
                         s = sblist_get(sl, i);
                         if(s) safefree(*s);
-		}
+        }
                 sblist_free(sl);
         }
 }
@@ -285,6 +289,8 @@ void free_config (struct config_s *conf)
         char *k;
         htab_value *v;
         size_t it;
+        safefree (conf->local_header);
+        safefree (conf->proxy_header);
         safefree (conf->logf_name);
         safefree (conf->stathost);
         safefree (conf->user);
@@ -471,6 +477,8 @@ static void initialize_config_defaults (struct config_s *conf)
          * Make sure the HTML error pages array is NULL to begin with.
          * (FIXME: Should have a better API for all this)
          */
+        conf->local_header = safestrdup("Local");
+        conf->proxy_header = safestrdup ("Host");
         conf->errorpages = NULL;
         conf->stathost = safestrdup (TINYPROXY_STATHOST);
         conf->idletimeout = MAX_IDLE_TIME;
@@ -624,6 +632,16 @@ set_int_arg (unsigned int *var, const char *line, regmatch_t * match)
  * values to return.
  *
  ***********************************************************************/
+
+static HANDLE_FUNC (handle_local_header)
+{
+        return set_string_arg (&conf->local_header, line, &match[2]);
+}
+
+static HANDLE_FUNC (handle_proxy_header)
+{
+        return set_string_arg (&conf->proxy_header, line, &match[2]);
+}
 
 static HANDLE_FUNC (handle_logfile)
 {
@@ -1022,17 +1040,17 @@ static HANDLE_FUNC (handle_reversepath)
 
 static enum proxy_type pt_from_string(const char *s)
 {
-	static const char pt_map[][7] = {
-		[PT_NONE]   = "none",
-		[PT_HTTP]   = "http",
-		[PT_SOCKS4] = "socks4",
-		[PT_SOCKS5] = "socks5",
-	};
-	unsigned i;
-	for (i = 0; i < sizeof(pt_map)/sizeof(pt_map[0]); i++)
-		if (!strcmp(pt_map[i], s))
-			return i;
-	return PT_NONE;
+    static const char pt_map[][7] = {
+        [PT_NONE]   = "none",
+        [PT_HTTP]   = "http",
+        [PT_SOCKS4] = "socks4",
+        [PT_SOCKS5] = "socks5",
+    };
+    unsigned i;
+    for (i = 0; i < sizeof(pt_map)/sizeof(pt_map[0]); i++)
+        if (!strcmp(pt_map[i], s))
+            return i;
+    return PT_NONE;
 }
 
 static HANDLE_FUNC (handle_upstream)
@@ -1068,7 +1086,7 @@ static HANDLE_FUNC (handle_upstream)
                 user = get_string_arg (line, &match[mi]);
         mi++;
 
-	if (match[mi].rm_so != -1)
+    if (match[mi].rm_so != -1)
                 pass = get_string_arg (line, &match[mi]);
         mi++;
 

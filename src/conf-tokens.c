@@ -19,6 +19,8 @@ config_directive_find (register const char *str, register size_t len)
   static const struct config_directive_entry wordlist[] =
     {
       {"",CD_NIL}, {"",CD_NIL},
+      {"local_header", CD_local_header},
+      {"proxy_header", CD_proxy_header},
       {"allow", CD_allow},
       {"stathost", CD_stathost},
       {"listen", CD_listen},

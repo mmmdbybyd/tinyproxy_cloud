@@ -3,6 +3,8 @@
 
 enum config_directive {
 CD_NIL = 0,
+CD_local_header,
+CD_proxy_header,
 CD_logfile,
 CD_pidfile,
 CD_anonymous,

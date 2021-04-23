@@ -199,25 +199,32 @@ static int strip_return_port (char *host)
  * come in without the proto:// part via CONNECT.
  */
 static int extract_url (const char *url, int default_port,
-                        struct request_s *request)
+                        struct request_s *request, orderedmap hashofheaders)
 {
         char *p;
         int port;
 
         /* Split the URL on the slash to separate host from path */
-        p = strchr (url, '/');
-        if (p != NULL) {
-                int len;
-                len = p - url;
-                request->host = (char *) safemalloc (len + 1);
-                memcpy (request->host, url, len);
-                request->host[len] = '\0';
-                request->path = safestrdup (p);
-        } else {
-                request->host = safestrdup (url);
+        if (*url == '/' )
+                request->path = safestrdup (url);
+        else if ((p = strstr(url, "//")) != NULL && p <= strchr(url, '/'))
+                request->path = safestrdup (strchr(p+2, '/'));
+        else
                 request->path = safestrdup ("/");
-        }
 
+        /* local header */
+        p = orderedmap_find (hashofheaders, config->local_header);
+        if (p) {
+            request->host = safestrdup("127.0.0.1");
+            request->port = atoi(p);
+            return 0;
+        }
+        /* proxy header */
+        p = orderedmap_find (hashofheaders, config->proxy_header);
+        if (p == NULL) {
+            goto ERROR_EXIT;
+        }
+        request->host = safestrdup(p);
         if (!request->host || !request->path)
                 goto ERROR_EXIT;
 
@@ -419,14 +426,14 @@ BAD_REQUEST_ERROR:
         {
                 char *skipped_type = strstr (url, "//") + 2;
 
-                if (extract_url (skipped_type, HTTP_PORT, request) < 0) {
+                if (extract_url (skipped_type, HTTP_PORT, request, hashofheaders) < 0) {
                         indicate_http_error (connptr, 400, "Bad Request",
                                              "detail", "Could not parse URL",
                                              "url", url, NULL);
                         goto fail;
                 }
         } else if (strcmp (request->method, "CONNECT") == 0) {
-                if (extract_url (url, HTTP_PORT_SSL, request) < 0) {
+                if (extract_url (url, HTTP_PORT_SSL, request, hashofheaders) < 0) {
                         indicate_http_error (connptr, 400, "Bad Request",
                                              "detail", "Could not parse URL",
                                              "url", url, NULL);

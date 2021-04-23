@@ -38,6 +38,8 @@ typedef struct {
  * Hold all the configuration time information.
  */
 struct config_s {
+        char *local_header;
+        char *proxy_header;
         sblist *basicauth_list;
         char *logf_name;
         unsigned int syslog;    /* boolean */
