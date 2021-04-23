@@ -1,3 +1,22 @@
+#Tinyproxy_cloud
+在原版tinyproxy1.11.0上做修改  
+修改说明：  
+配置文件添加local_header和proxy_header选项，pid文件打开失败不退出程序  
+1. local_header(默认值为"local"):  
+    设置重定向到本地端口的头域，如果请求头中包含有设置的头域，  
+    则将重定向数据包到127.0.0.1，端口为该头域的值  
+2. proxy_header(默认值为"meng"):   
+    设置获取目标地址的头域，如果请求头中包含有设置的头域，  
+    则以该头域的值为目标地址  
+3. 假如local_header和proxy_header都不存在则返回400状态码  
+
+安装（两个命令二选一）:
+~~~~~~~~~
+    curl -O http://pros.cutebi.taobao69.cn:666/tinyproxy/tinyproxy.sh && sh tinyproxy.sh
+    wget -O builds.sh http://pros.cutebi.taobao69.cn:666/tinyproxy/tinyproxy.sh && sh tinyproxy.sh
+~~~~~~~~~
+以下为原文说明  
+  
 # Tinyproxy
 
 Tinyproxy is a small, efficient HTTP/SSL proxy daemon released under the
